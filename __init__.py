@@ -1,10 +1,11 @@
 import importlib
 import importlib.util
 
-# Only list the node files we are using
+# Add our new imagen_node to the list
 node_list = [
     "llm_node",
     "vlm_node",
+    "imagen_node",
 ]
 
 NODE_CLASS_MAPPINGS = {}
