@@ -1,3 +1,3 @@
-fal-client
+google-generativeai
 torch
 opencv-python
