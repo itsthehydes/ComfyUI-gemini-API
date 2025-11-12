@@ -1,8 +1,8 @@
-from .fal_utils import ApiHandler, FalConfig
+import google.generativeai as genai
+from .google_api_utils import GoogleApiConfig, ApiHandler
 
-# Initialize FalConfig
-fal_config = FalConfig()
-
+# Initialize GoogleApiConfig
+google_config = GoogleApiConfig()
 
 class LLMNode:
     @classmethod
@@ -12,19 +12,10 @@ class LLMNode:
                 "prompt": ("STRING", {"default": "", "multiline": True}),
                 "model": (
                     [
-                        "google/gemini-flash-1.5-8b",
-                        "anthropic/claude-3.5-sonnet",
-                        "anthropic/claude-3-haiku",
-                        "google/gemini-pro-1.5",
-                        "google/gemini-flash-1.5",
-                        "meta-llama/llama-3.2-1b-instruct",
-                        "meta-llama/llama-3.2-3b-instruct",
-                        "meta-llama/llama-3.1-8b-instruct",
-                        "meta-llama/llama-3.1-70b-instruct",
-                        "openai/gpt-4o-mini",
-                        "openai/gpt-4o",
+                        "gemini-1.5-flash", # Changed to Google models
+                        "gemini-1.5-pro",
                     ],
-                    {"default": "google/gemini-flash-1.5-8b"},
+                    {"default": "gemini-1.5-flash"},
                 ),
                 "system_prompt": ("STRING", {"default": "", "multiline": True}),
             },
@@ -32,28 +23,36 @@ class LLMNode:
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "generate_text"
-    CATEGORY = "FAL/LLM"
+    CATEGORY = "GoogleAPI/LLM" # Renamed category
 
     def generate_text(self, prompt, model, system_prompt):
-        try:
-            arguments = {
-                "model": model,
-                "prompt": prompt,
-                "system_prompt": system_prompt,
-            }
+        # 1. Configure the client
+        if not google_config.configure_client():
+            return ApiHandler.handle_text_generation_error(model, "Google API Key is not set or invalid.")
 
-            result = ApiHandler.submit_and_get_result("fal-ai/any-llm", arguments)
-            return (result["output"],)
+        try:
+            # 2. Set up the generative model
+            model_client = genai.GenerativeModel(
+                model_name=model,
+                system_instruction=system_prompt if system_prompt else None
+            )
+
+            # 3. Call the API
+            response = model_client.generate_content(prompt)
+            
+            # 4. Return the text
+            return (response.text,)
+
         except Exception as e:
             return ApiHandler.handle_text_generation_error(model, str(e))
 
 
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
-    "LLM_fal": LLMNode,
+    "LLM_google": LLMNode, # Renamed node
 }
 
 # Node display name mappings
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "LLM_fal": "LLM (fal)",
+    "LLM_google": "LLM (Google)", # Renamed node
 }
