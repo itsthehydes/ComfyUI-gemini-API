@@ -1,8 +1,8 @@
-from .fal_utils import ApiHandler, FalConfig, ImageUtils
+import google.generativeai as genai
+from .google_api_utils import GoogleApiConfig, ImageUtils, ApiHandler
 
-# Initialize FalConfig
-fal_config = FalConfig()
-
+# Initialize GoogleApiConfig
+google_config = GoogleApiConfig()
 
 class VLMNode:
     @classmethod
@@ -12,14 +12,11 @@ class VLMNode:
                 "prompt": ("STRING", {"default": "", "multiline": True}),
                 "model": (
                     [
-                        "google/gemini-flash-1.5-8b",
-                        "anthropic/claude-3.5-sonnet",
-                        "anthropic/claude-3-haiku",
-                        "google/gemini-pro-1.5",
-                        "google/gemini-flash-1.5",
-                        "openai/gpt-4o",
+                        "gemini-1.5-flash", # Changed to Google models
+                        "gemini-1.5-pro",
+                        "gemini-pro-vision", # Older, but good example
                     ],
-                    {"default": "google/gemini-flash-1.5-8b"},
+                    {"default": "gemini-1.5-flash"},
                 ),
                 "system_prompt": ("STRING", {"default": "", "multiline": True}),
                 "image": ("IMAGE",),
@@ -28,38 +25,47 @@ class VLMNode:
 
     RETURN_TYPES = ("STRING",)
     FUNCTION = "generate_text"
-    CATEGORY = "FAL/VLM"
+    CATEGORY = "GoogleAPI/VLM" # Renamed category
 
     def generate_text(self, prompt, model, system_prompt, image):
+        # 1. Configure the client (it will only run once)
+        if not google_config.configure_client():
+            return ApiHandler.handle_text_generation_error(model, "Google API Key is not set or invalid.")
+
         try:
-            # Upload the image using ImageUtils
-            image_url = ImageUtils.upload_image(image)
-            if not image_url:
+            # 2. Convert the image tensor to a PIL Image
+            pil_image = ImageUtils.tensor_to_pil(image)
+            if not pil_image:
                 return ApiHandler.handle_text_generation_error(
-                    model, "Failed to upload image"
+                    model, "Failed to convert image tensor to PIL"
                 )
 
-            arguments = {
-                "model": model,
-                "prompt": prompt,
-                "system_prompt": system_prompt,
-                "image_url": image_url,
-            }
-
-            result = ApiHandler.submit_and_get_result(
-                "fal-ai/any-llm/vision", arguments
+            # 3. Set up the generative model
+            model_client = genai.GenerativeModel(
+                model_name=model,
+                system_instruction=system_prompt if system_prompt else None
             )
-            return (result["output"],)
+
+            # 4. Prepare the content for the API
+            #    Send the prompt and the image together
+            contents = [prompt, pil_image]
+
+            # 5. Call the API
+            response = model_client.generate_content(contents)
+            
+            # 6. Return the text part of the response
+            return (response.text,)
+        
         except Exception as e:
             return ApiHandler.handle_text_generation_error(model, str(e))
 
 
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
-    "VLM_fal": VLMNode,
+    "VLM_google": VLMNode, # Renamed node
 }
 
 # Node display name mappings
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "VLM_fal": "VLM (fal)",
+    "VLM_google": "VLM (Google)", # Renamed node
 }
