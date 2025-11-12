@@ -1,13 +1,10 @@
 import importlib
 import importlib.util
 
+# Only list the node files we are using
 node_list = [
-    "image_node",
-    "video_node",
     "llm_node",
     "vlm_node",
-    "trainer_node",
-    "upscaler_node",
 ]
 
 NODE_CLASS_MAPPINGS = {}
